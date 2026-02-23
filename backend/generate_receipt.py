@@ -1,0 +1,11 @@
+from PIL import Image, ImageDraw, ImageFont
+img = Image.new('RGB', (400, 400), color = (255, 255, 255))
+d = ImageDraw.Draw(img)
+d.text((10,10), "ACME CORP", fill=(0,0,0))
+d.text((10,50), "Invoice #: 10023", fill=(0,0,0))
+d.text((10,90), "Date: 2024-03-22", fill=(0,0,0))
+d.text((10,130), "Item 1: Widgets - $50.00", fill=(0,0,0))
+d.text((10,170), "Item 2: Tools - $25.00", fill=(0,0,0))
+d.text((10,210), "Tax: $5.00", fill=(0,0,0))
+d.text((10,250), "Total: $80.00", fill=(0,0,0))
+img.save('test_receipt.png')

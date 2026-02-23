@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: invoice-ai-backend
+    env: docker
+    region: ohio
+    plan: free
+    branch: main
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: invoice-ai-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 8000
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: EMAIL_ADDRESS
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+
+databases:
+  - name: invoice-ai-db
+    databaseName: invoice_ai
+    user: invoice_user
+    plan: free
+    region: ohio
