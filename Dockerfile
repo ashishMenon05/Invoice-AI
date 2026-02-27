@@ -20,5 +20,8 @@ COPY . .
 # Expose Render standard port
 EXPOSE 10000
 
+# Set Python Path so backend modules resolve correctly
+ENV PYTHONPATH=/app/backend
+
 # Start Uvicorn
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "10000"]
