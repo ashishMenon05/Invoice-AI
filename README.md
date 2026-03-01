@@ -32,29 +32,82 @@ The result: an AI "accountant" that reads invoices the way a human does — unde
 
 ## 🖼️ Screenshots
 
-### Client Dashboard
-![Client Dashboard](./assets/screenshots/client_dashboard.png)
-*Real-time invoice processing pipeline with status tracking*
+## 👤 Client View
 
-### Upload Interface
-![Upload Interface](./assets/screenshots/client_upload.png)
-*Drag-and-drop multi-file upload with batch processing support*
+The client-facing interface is designed for simplicity — upload invoices and track their status in real time.
 
-### My Invoices
-![My Invoices](./assets/screenshots/client_invoices.png)
-*Full invoice list with AI-extracted data, confidence scores, and audit trail*
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/client_dashboard.png" alt="Client Dashboard"/>
+      <br/><b>Dashboard</b>
+      <br/><sub>Real-time processing pipeline with live invoice status updates</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/client_upload.png" alt="Upload Interface"/>
+      <br/><b>Upload Interface</b>
+      <br/><sub>Drag-and-drop multi-file upload — PDF, images, spreadsheets</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/client_invoices.png" alt="My Invoices"/>
+      <br/><b>My Invoices</b>
+      <br/><sub>Full invoice list with AI-extracted vendor, amount, date and status</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/client_email_card.png" alt="Email Ingestion Card"/>
+      <br/><b>Email Ingestion</b>
+      <br/><sub>Pro tip card — forward invoices to the inbox for automatic processing</sub>
+    </td>
+  </tr>
+</table>
 
-### Admin Dashboard
-![Admin Dashboard](./assets/screenshots/admin_dashboard.png)
-*Organization-wide analytics — volume trends, processing rates, confidence distributions*
+---
 
-### Admin Invoice Queue
-![Admin Invoice Queue](./assets/screenshots/admin_invoices.png)
-*Review queue for low-confidence invoices requiring human verification*
+## 🛡️ Admin View
 
-### Policy Engine
-![Policy Engine](./assets/screenshots/admin_policies.png)
-*Per-organization audit policies — auto-approve thresholds, duplicate detection, fraud flags*
+The admin interface gives organization managers full visibility, control, and audit capability over every invoice flowing through the system.
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/admin_dashboard.png" alt="Admin Dashboard"/>
+      <br/><b>Analytics Dashboard</b>
+      <br/><sub>Org-wide metrics — volume trends, processing rates, confidence distributions</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/admin_invoices.png" alt="Admin Invoice Queue"/>
+      <br/><b>Invoice Review Queue</b>
+      <br/><sub>All client invoices with status, confidence score, and quick-action buttons</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/admin_invoice_queue.png" alt="Admin Invoice List"/>
+      <br/><b>Full Invoice List</b>
+      <br/><sub>Complete audit log — every invoice, every status, every client in the org</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/admin_policies.png" alt="Policy Engine"/>
+      <br/><b>Policy Engine</b>
+      <br/><sub>Configure auto-approve thresholds, duplicate detection, fraud flags per org</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/admin_reprocess.png" alt="Batch Reprocessing"/>
+      <br/><b>Batch Reprocessing</b>
+      <br/><sub>One-click re-run AI pipeline on all failed invoices asynchronously</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/admin_reprocess_result.png" alt="Reprocess Result"/>
+      <br/><b>Reprocessing Result</b>
+      <br/><sub>Invoices queued into Processing state — AI pipeline runs in background</sub>
+    </td>
+  </tr>
+</table>
+
 
 ---
 
