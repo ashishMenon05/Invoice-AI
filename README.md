@@ -1,147 +1,387 @@
-# InvoiceAI Cloud: Autonomous Multi-Tenant Financial Data Extraction Platform
-## A Comprehensive Technical Whitepaper & Repository Guide
+# InvoiceAI Cloud 🧾🤖
+### Autonomous Multi-Tenant Financial Document Extraction Platform
 
-Welcome to the official repository for **InvoiceAI Cloud**. This document serves as both a monolithic `README.md` and an in-depth technical paper detailing the architecture, design patterns, algorithmic strategies, and exact technologies utilized in building this enterprise-grade SaaS platform.
+<div align="center">
 
-If you are looking for a quick start guide, please see [`BRIEF_DOCUMENTATION.md`](./BRIEF_DOCUMENTATION.md) for concise installation instructions.
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon.tech-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Cloudflare](https://img.shields.io/badge/Cloudflare-R2_Storage-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
+![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3_70B-FF6B35?style=for-the-badge)
 
----
+**Live Frontend:** [invoice-ai-ashy.vercel.app](https://invoice-ai-ashy.vercel.app)  
+**Backend:** Self-hosted via Cloudflare Tunnel (local machine → public HTTPS URL)
 
-## 1. Abstract & Problem Statement
-
-### 1.1 The Challenge of Unstructured Financial Data
-In the modern B2B ecosystem, organizations receive thousands of invoices, receipts, and discrete financial documents daily. Historically, processing these documents requires tedious manual data entry, which is highly prone to human error, extremely slow, and non-scalable. 
-
-Traditional Optical Character Recognition (OCR) systems attempt to solve this by matching regular expressions against extracted text strings. However, traditional OCR is brittle; if a vendor changes their invoice layout or if a receipt is crumpled, the coordinate-based or Regex-based extraction completely fails. 
-
-### 1.2 The InvoiceAI Solution
-**InvoiceAI Cloud** solves this by treating financial data extraction as a hybrid Computer Vision and Large Language Model (LLM) reasoning problem. By intelligently preprocessing images to preserve spatial topography (rows and columns) and feeding that hyper-structured text into a highly-capable LLM (`llama-3.3-70b-versatile`), the system can conceptually "understand" the document exactly like a human accountant would. 
-
-The result is a platform capable of extracting structured JSON (including deeply nested line items) from completely unseen layouts with zero prior template training.
+</div>
 
 ---
 
-## 2. High-Level System Architecture
+## 📖 What is InvoiceAI Cloud?
 
-InvoiceAI operates on a fully decoupled microservices-inspired monolithic architecture, cleanly separating the user-facing interface, the data layer, and the asynchronous AI processing pipeline.
+InvoiceAI Cloud is an **enterprise-grade B2B SaaS platform** that autonomously transforms chaotic, unstructured financial documents (crumpled receipts, scanned PDFs, Excel spreadsheets, emailed invoices) into clean, structured, database-ready JSON — with **zero template training, zero manual input, and zero downtime**.
 
-- **Frontend:** A highly interactive, server-side rendered Web App built in **Next.js 14**.
-- **Backend API:** A highly concurrent REST API built in **FastAPI (Python)**.
-- **Relational Data:** **PostgreSQL** handled via **SQLAlchemy ORM**.
-- **Object Storage:** **Cloudflare R2** (S3 Protocol) for storing massive volumes of raw PDFs and Images securely.
-- **Job Orchestration:** Background tasks and **APScheduler** handling the asynchronous OCR, LLM inference, and automated IMAP email polling.
+Traditional OCR systems fail on complex invoices because they use brittle regex pattern matching. InvoiceAI solves this by combining:
+1. **Computer Vision preprocessing** (OpenCV adaptive thresholding → perfect text isolation)
+2. **Spatial OCR** (Tesseract PSM 6 → row-alignment preservation)  
+3. **LLM Reasoning** (LLaMA 3.3 70B → semantic understanding of any invoice layout)
 
----
-
-## 3. Frontend Implementation Deep-Dive
-
-The user interface of InvoiceAI is meticulously crafted to be purely functional, immediately responsive, and incredibly aesthetic.
-
-### 3.1 Technology Stack (Client-Side)
-- **Framework:** **Next.js 14** utilizing the modern App Router (`app/` directory) for optimized routing and layout nesting.
-- **Language:** **TypeScript**. Enforces strict type safety across payloads bridging the backend API and frontend component props.
-- **Styling:** **Tailwind CSS**. A utility-first CSS framework enabling pixel-perfect implementations of deep dark modes, glassmorphism, and responsive grids.
-- **Components & Iconography:** **Lucide React** provides scalable SVGs, while custom stateless components handle complex interactions.
-- **Data Visualization:** **Recharts**. Used extensively in the Admin Analytics route to render volumetric charts, pipelines, and historical performance tracking.
-
-### 3.2 State Management & Contextization
-- **Authentication Context:** `AuthContext.tsx` wraps the entire application. It intercepts login payloads, decodes Google SSR OAuth tokens via `@react-oauth/google`, and injects the `Bearer` token into an Axios/Fetch interceptor.
-- **Polling Hooks:** Because invoice extraction takes time (OCR + LLM latency), the frontend utilizes a custom `useInvoiceStatus` React Hook. Rather than locking the user's screen in a `waiting` state, this hook performs exponential backoff polling, updating the UI badge from "Processing" to "Under Review" beautifully the exact moment the backend commits the extraction.
-
-### 3.3 The Split-Screen Audit UI
-A highly sophisticated screen layout exists at `/client/invoices/[id]`. It leverages the Web API `window.URL.createObjectURL()` to stream encrypted binary Blob data directly from the Python backend securely.
-- **Left Pane:** Renders the original source receipt/PDF within an iframe or explicit image viewer.
-- **Right Pane:** Renders the JSON output (Vendor, Taxes, Line Items) natively alongside editable inputs, allowing the human reviewer to instantly check the LLM's work side-by-side.
+The result: an AI "accountant" that reads invoices the way a human does — understanding context, layout, and meaning — not just matching patterns.
 
 ---
 
-## 4. Backend Implementation Deep-Dive
+## 🖼️ Screenshots
 
-The backend is engineered for raw speed, concurrency, and rock-solid reliability.
+### Client Dashboard
+![Client Dashboard](./assets/screenshots/client_dashboard.png)
+*Real-time invoice processing pipeline with status tracking*
 
-### 4.1 Technology Stack (Server-Side)
-- **Framework:** **FastAPI**. Chosen specifically for its asynchronous underpinnings (`Starlette`), highly-automatic data validation (`Pydantic`), and implicit OpenAPI JSON spec generation.
-- **Server:** **Uvicorn** utilized as the ASGI web server interface bridging HTTP connections to Python.
-- **Security:** 
-  - **Passlib & BCCrypt:** Salted and hashed passwords.
-  - **PyJWT:** Algorithm `HS256` payload structuring for completely stateless token management.
-  - **SlowAPI:** Limiter injected across all top-level public endpoints to rate-limit malicious actors and prevent API spam.
+### Upload Interface
+![Upload Interface](./assets/screenshots/client_upload.png)
+*Drag-and-drop multi-file upload with batch processing support*
 
-### 4.2 Database Modeling & Tenancy
-Strict B2B multi-tenancy is enforced.
-- **Models:** Built using `SQLAlchemy`. The core architecture pivots entirely around the `Organization` object. Every `User`, `Invoice`, and `OrganizationPolicy` enforces a Foreign Key cascade mapped to an `Organization`.
-- **Query Routing:** The `require_client` or `require_admin` dependency implicitly injects the requester's `org_id` into all SQLAlchemy `.filter()` executions. It is physically impossible for Tenant A to query an invoice belonging to Tenant B.
+### My Invoices
+![My Invoices](./assets/screenshots/client_invoices.png)
+*Full invoice list with AI-extracted data, confidence scores, and audit trail*
 
-### 4.3 Storage Abstraction Layer
-`services/storage_service.py` handles binary streams. Using `boto3`, the system treats Cloudflare R2 as a standard AWS S3 bucket.
-- Files are saved logically as: `organizations/{org_id}/invoices/{uuid}_{original_filename}`.
-- This layer guarantees that disk I/O does not block the API thread.
+### Admin Dashboard
+![Admin Dashboard](./assets/screenshots/admin_dashboard.png)
+*Organization-wide analytics — volume trends, processing rates, confidence distributions*
 
----
+### Admin Invoice Queue
+![Admin Invoice Queue](./assets/screenshots/admin_invoices.png)
+*Review queue for low-confidence invoices requiring human verification*
 
-## 5. The Advanced AI Pipeline Deep-Dive
-
-This is the intellectual property and core competency of the codebase. The pipeline orchestrates Optical Character Recognition and Large Language Models simultaneously.
-
-### 5.1 Document Ingestion & Classification
-When a document hits the ingestion pipeline (either via Frontend Upload or Automated Email Inbox Syncing):
-1. **Type Resolution:** The payload extension/MIME is verified.
-2. **Digital Vector Fallback (`pdfplumber`):** If the file is a vector-based digital PDF (not a scan), `pdfplumber` rips the exact string data from the binary encoded fonts. This takes `<0.1s` and is perfectly accurate, completely bypassing the need for Computer Vision. 
-3. **Structured Spreadsheets (`pandas`):** If the user uploads an `.xlsx` or `.csv`, `services/spreadsheet_service.py` completely bypasses the LLM, mapping columns natively to the Database.
-
-### 5.2 Computer Vision Extraction (`pytesseract` & `OpenCV`)
-If the document is an image or a scanned PDF:
-1. **Grayscaling:** The image is explicitly reduced to 1-channel grayscale via `cv2.cvtColor`.
-2. **Adaptive Thresholding:** `cv2.adaptiveThreshold` executes a sliding-window Gaussian calculation across the image matrix. This allows the system to read pitch-black text on a bright white background equally as well as text obscured by a shadow or crumple.
-3. **Strict Spatial OCR (`--psm 6`):** Standard Tesseract (PSM 3) destroys tabular columns. InvoiceAI enforces **Page Segmentation Mode 6**. Tesseract is forced to assume the text is a single uniform block, aligning X/Y pixel bounds forcefully into rows. This guarantees that `Item | Qty | Price` does not get scrambled.
-
-### 5.3 Massive Parameter LLM Extraction
-The meticulously aligned raw text is passed to `services/llm_service.py`.
-- **Engine:** **Groq** Cloud API.
-- **Model:** **`llama-3.3-70b-versatile`**. A 70-billion parameter neural network.
-- **Prompt Engineering Strategy:** We employ rigid prompt engineering instructing the AI to output *only* pure JSON. We enforce heuristics: *"Do not extract phone numbers as Quantities"* and *"Map quantities to the immediate left-aligned text"*.
-- **Post-Calculation Failsafe:** Since LLMs struggle with math, if the AI fails to extract an explicit "Grand Total" from a receipt, the Python service intercepts the JSON, extracts the scalar floats attached to the `line_total` arrays, and deterministically executes a `sum()` calculation securely. This eliminates "$0 Total" hallucinations.
+### Policy Engine
+![Policy Engine](./assets/screenshots/admin_policies.png)
+*Per-organization audit policies — auto-approve thresholds, duplicate detection, fraud flags*
 
 ---
 
-## 6. Autonomous Capabilities
+## 🏗️ System Architecture
 
-### 6.1 Email Processing Cron Jobs
-`services/email_service.py` handles invisible automation.
-- Utilizes `APScheduler` configured with the FastAPI `lifespan` event.
-- Connects directly to `imap.gmail.com`.
-- Specifically searches `UNSEEN` emails, matches the Sender Domain to an `Organization`, downloads the attachments, and triggers the OCR pipeline seamlessly in the background. Replies immediately with an automated confirmation email using `smtplib`.
-
-### 6.2 AI Autonomous Auditor
-Admins can enable a Policy Engine property: `ai_auto_review_enabled`.
-- Acts as a secondary robotic employee.
-- It intercepts the completed extraction, verifies all line items multiply correctly (`unit_price * qty == line_total`), and checks for matching hashes the system automatically generates (`hashlib.sha256`) against the raw text to flag duplicate uploads.
-- If flawless, it skips the human entirely and marks the invoice `APPROVED`. If suspicious, it marks it `ADMIN_PASS_NEEDED`.
-
----
-
-## 7. Security & Compliance Standards
-
-1. **In-Flight Encryption:** All data travels over HTTPS/WSS (Enforced in production via Render SSL issuance).
-2. **At-Rest Encryption:** User passwords are BCCrypt hashed. Organization IDs are deeply obfuscated via UUIDv4 identifiers preventing enumeration attacks.
-3. **API Integrity:** The Global Exception Handler (`main.py`) suppresses stack traces in production, returning standardized, vague JSON error footprints preventing attacker leakage.
-
----
-
-## 8. Development & Deployment Procedures
-
-### 8.1 Local Spinning
-1. Install PostgreSQL and `tesseract-ocr`.
-2. Copy `.env.example` manually routing to your R2/Groq/Postgres instances.
-3. Backend: `python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && uvicorn main:app --reload`
-4. Frontend: `cd frontend-next && npm i && npm run dev`
-
-### 8.2 Production Deployment (Render)
-The platform is governed by `render.yaml` (Infrastructure as Code).
-- Utilizes a `Dockerfile` derived from `python:3.10-slim`.
-- Injects native OS Ubuntu packages (`apt-get install -y tesseract-ocr tesseract-ocr-eng libpq-dev`) completely independent of Python, ensuring the C-bindings for OCR operate losslessly.
-- Connected via a persistent, managed Neon Serverless Postgres DB.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    CLIENT BROWSER                                │
+│          Vercel (Next.js 14 SSR Frontend)                       │
+│    invoice-ai-ashy.vercel.app                                   │
+└────────────────────┬────────────────────────────────────────────┘
+                     │ HTTPS API Calls (NEXT_PUBLIC_API_URL)
+                     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│            CLOUDFLARE TUNNEL (Public HTTPS ↔ Local)             │
+│    https://vids-exec-tunnel-level.trycloudflare.com             │
+└────────────────────┬────────────────────────────────────────────┘
+                     │ Routed to localhost:8000
+                     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              FASTAPI BACKEND (localhost:8000)                    │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐  │
+│  │  /auth   │ │/invoices │ │ /admin   │ │  APScheduler     │  │
+│  │ Google   │ │  Upload  │ │ Policies │ │  (Email Polling) │  │
+│  │ OAuth    │ │  OCR/LLM │ │ Analytics│ │  Every 60s       │  │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘  │
+└───────────┬────────────┬─────────────────────────────────────────┘
+            │            │
+            ▼            ▼
+┌───────────────┐  ┌─────────────────────────────────────────────┐
+│  Neon.tech    │  │           Cloudflare R2 Storage             │
+│  PostgreSQL   │  │   organizations/{org_id}/invoices/{uuid}    │
+│  (Serverless) │  │   S3-compatible · Zero egress fees          │
+└───────────────┘  └─────────────────────────────────────────────┘
+```
 
 ---
 
-### *Authored for comprehensive software engineering excellence.*
+## 🧠 The AI Pipeline Deep-Dive
+
+### Step 1: Document Ingestion & Classification
+```
+File Upload / Email Attachment
+        │
+        ├──► .xlsx / .csv → pandas direct mapping (bypasses AI entirely, instant)
+        ├──► Digital PDF  → pdfplumber text extraction (<0.1s, pixel-perfect)
+        └──► Image / Scanned PDF → Computer Vision Pipeline ↓
+```
+
+### Step 2: Computer Vision (OpenCV)
+```python
+# 1. Convert to grayscale (remove color noise)
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# 2. Adaptive Gaussian Thresholding
+#    Handles crumpled receipts, shadows, bad lighting
+processed = cv2.adaptiveThreshold(
+    gray, 255,
+    cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+    cv2.THRESH_BINARY, 11, 2
+)
+```
+
+### Step 3: Spatial OCR (Tesseract PSM 6)
+```python
+# PSM 6 = "Assume single uniform block of text"
+# This PRESERVES horizontal row alignment:
+#   Item | Qty | Price   ← stays intact
+# Standard PSM 3 would scramble all columns
+config = "--oem 3 --psm 6"
+text = pytesseract.image_to_string(processed, config=config)
+```
+
+### Step 4: LLM Extraction (LLaMA 3.3 70B via Groq)
+```python
+# 70B parameter model reasons about the invoice
+# like a human accountant would
+# Enforces strict JSON output with heuristic defenses:
+# "Quantities are small integers — do not confuse SKU codes with quantities"
+```
+
+### Step 5: Deterministic Failsafe
+```python
+# If LLM missed Grand Total but extracted line items:
+if extracted.get("grand_total") is None:
+    line_totals = [item.get("line_total", 0) for item in line_items]
+    extracted["grand_total"] = sum(line_totals)
+    # Math is too important to leave to AI imagination
+```
+
+---
+
+## 🔒 Multi-Tenant Security Architecture
+
+Every piece of data in InvoiceAI is scoped to an **Organization**. The database schema enforces this at every layer:
+
+```
+Organization
+    └── Users (org_id FK)
+    └── Invoices (org_id FK)
+    └── OrganizationPolicy (org_id FK)
+    └── InvoiceEvents (via invoice → org cascade)
+```
+
+**Why this matters:** Even if a client guesses another organization's invoice UUID, the FastAPI `require_client` dependency injects the calling user's `org_id` into **every** SQLAlchemy query. It is physically impossible for Tenant A to read Tenant B's data at the API layer.
+
+---
+
+## 🛠️ Full Technology Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| Frontend Framework | Next.js 14 (App Router) | SSR, optimized routing, TypeScript |
+| Frontend Styling | Tailwind CSS | Dark mode glassmorphism, responsive |
+| Backend Framework | FastAPI | Async I/O, Pydantic validation, OpenAPI |
+| ASGI Server | Uvicorn | High-performance async HTTP |
+| Database | PostgreSQL on Neon.tech | ACID compliance, serverless scaling |
+| ORM | SQLAlchemy | Type-safe queries, injection prevention |
+| AI / LLM | Groq API (LLaMA 3.3 70B) | 800 tokens/sec, best reasoning accuracy |
+| OCR Engine | Tesseract 5 + OpenCV | Spatial layout preservation with PSM 6 |
+| Object Storage | Cloudflare R2 | S3-compatible, zero egress bandwidth fees |
+| Background Jobs | APScheduler + BackgroundTasks | Non-blocking async pipeline |
+| Authentication | JWT (HS256) + Google OAuth | Stateless, scalable authentication |
+| Password Hashing | Passlib + BCrypt | Salted, irreversible hashing |
+| Rate Limiting | SlowAPI | API abuse prevention |
+| Email Integration | IMAP (Gmail) + smtplib | Automated email invoice ingestion |
+| Tunnel | Cloudflare Tunnel | Expose local backend to the internet |
+
+---
+
+## 🚀 Local Development Setup
+
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- Tesseract OCR installed (`tesseract-ocr`, `tesseract-ocr-eng` via apt)
+- PostgreSQL (or a free [Neon.tech](https://neon.tech) account)
+- [Groq API key](https://console.groq.com) (free tier available)
+- [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket
+
+### Backend Setup
+```bash
+cd backend
+
+# Create and activate virtual environment
+python -m venv venv && source venv/bin/activate
+
+# Install all dependencies
+pip install -r requirements.txt
+
+# Copy example env and fill in your values
+cp .env.example .env
+# Edit .env with your DB URL, Groq key, R2 credentials
+
+# Start the backend
+uvicorn main:app --reload --port 8000
+# API docs available at: http://localhost:8000/docs
+```
+
+### Frontend Setup
+```bash
+cd frontend-next
+
+# Install dependencies
+npm install
+
+# Set environment variable
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" >> .env.local
+
+# Start development server
+npm run dev
+# App available at: http://localhost:3000
+```
+
+---
+
+## 🌐 Production Deployment: Cloudflare Tunnel + Vercel
+
+This project uses **your local machine as the backend server** exposed via Cloudflare Tunnel for maximum performance (no memory limits vs cloud free tiers).
+
+### Step 1: Start the Backend
+```bash
+cd backend
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+### Step 2: Create a Public URL (Cloudflare Tunnel)
+```bash
+# Quick tunnel (URL changes on restart):
+cloudflared tunnel --url http://localhost:8000
+
+# Or use the provided startup script:
+./start-tunnel.sh
+```
+Copy the `https://xxxx.trycloudflare.com` URL shown.
+
+### Step 3: Connect Vercel Frontend
+1. Go to [vercel.com](https://vercel.com) → your project → **Settings → Environment Variables**
+2. Set `NEXT_PUBLIC_API_URL` = `https://xxxx.trycloudflare.com`
+3. Trigger a redeploy
+
+### Step 4: Configure Environment Variables (`.env`)
+```bash
+DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
+SECRET_KEY=your-secret-key-here
+GROQ_API_KEY=gsk_xxx
+R2_ACCESS_KEY=your-r2-access-key
+R2_SECRET_KEY=your-r2-secret-key
+R2_ENDPOINT_URL=https://your-account-id.r2.cloudflarestorage.com
+R2_BUCKET_NAME=your-bucket-name
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+ALLOWED_ORIGINS=["https://your-vercel-app.vercel.app","http://localhost:3000"]
+```
+
+---
+
+## 📧 Automated Email Invoice Ingestion
+
+InvoiceAI can autonomously ingest invoices sent to a configured email address:
+
+1. Set `EMAIL_ADDRESS` and `EMAIL_PASSWORD` (Gmail App Password) in `.env`
+2. The backend polls IMAP every 60 seconds
+3. Any PDF/image attachment from a recognized organization domain is automatically:
+   - Downloaded from Gmail
+   - Processed through the full OCR + LLM pipeline
+   - Saved to Cloudflare R2
+   - Added to the invoice database
+   - Acknowledged with an automated reply email to the sender
+
+---
+
+## 📋 Required Environment Variables
+
+| Variable | Description | Example |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host/db` |
+| `SECRET_KEY` | JWT signing secret | Any long random string |
+| `GROQ_API_KEY` | Groq LLM API key | `gsk_xxx...` |
+| `R2_ACCESS_KEY` | Cloudflare R2 Access Key ID | 32-char hex string |
+| `R2_SECRET_KEY` | Cloudflare R2 Secret Access Key | 64-char hex string |
+| `R2_ENDPOINT_URL` | Cloudflare R2 S3 endpoint | `https://<account-id>.r2.cloudflarestorage.com` |
+| `R2_BUCKET_NAME` | R2 bucket name | `invoiceai-storage` |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | `xxx.apps.googleusercontent.com` |
+| `ALLOWED_ORIGINS` | CORS allowed origins (JSON array) | `["https://app.vercel.app"]` |
+| `EMAIL_ADDRESS` | Gmail address for email ingestion | `invoices@gmail.com` |
+| `EMAIL_PASSWORD` | Gmail App Password (not account password) | 16-char app password |
+
+---
+
+## 🔌 API Reference
+
+The FastAPI backend auto-generates interactive documentation:
+- **Swagger UI:** `http://localhost:8000/docs`
+- **ReDoc:** `http://localhost:8000/redoc`
+
+Key endpoints:
+```
+POST /api/v1/auth/register          Register new organization + admin
+POST /api/v1/auth/login             Email/password login → JWT
+POST /api/v1/auth/google-login      Google OAuth → JWT
+POST /api/v1/invoices/upload        Upload invoice file for processing
+GET  /api/v1/invoices/my            List user's invoices
+GET  /api/v1/invoices/{id}          Get invoice details + AI extraction
+POST /api/v1/invoices/{id}/reprocess Re-run AI pipeline on existing invoice
+DELETE /api/v1/invoices/{id}        Delete invoice + R2 file
+GET  /api/v1/admin/dashboard        Organization analytics
+GET  /api/v1/admin/invoices         All org invoices (admin view)
+POST /api/v1/admin/invoices/{id}/approve   Manually approve
+POST /api/v1/admin/invoices/{id}/reject    Reject with reason
+GET  /api/v1/admin/policies/{org_id}       Get audit policy
+PUT  /api/v1/admin/policies/{org_id}       Update policy thresholds
+GET  /health                               Health check endpoint
+```
+
+---
+
+## 📁 Project Structure
+
+```
+invoice-ai-cloud/
+├── backend/                    # FastAPI Python Backend
+│   ├── main.py                 # App entrypoint, CORS, lifespan, health
+│   ├── dependencies.py         # DB session, auth dependencies
+│   ├── requirements.txt        # All Python dependencies
+│   ├── core/
+│   │   ├── config.py           # Pydantic settings (env vars)
+│   │   ├── security.py         # JWT token creation/verification
+│   │   └── logger.py           # Structured logging setup
+│   ├── models/
+│   │   └── all.py              # SQLAlchemy models (Org, User, Invoice, Policy, Event)
+│   ├── api/routes/
+│   │   ├── auth.py             # Register, login, Google OAuth
+│   │   ├── invoice.py          # Upload, list, reprocess, delete
+│   │   └── admin.py            # Dashboard, review queue, policy, analytics
+│   └── services/
+│       ├── ocr_service.py      # OpenCV → Tesseract extraction
+│       ├── llm_service.py      # Groq API prompt engineering + response parsing
+│       ├── invoice_service.py  # Orchestration: upload → OCR → LLM → DB
+│       ├── storage_service.py  # Cloudflare R2 upload/download/delete
+│       ├── email_service.py    # IMAP polling + SMTP replies
+│       └── spreadsheet_service.py  # Excel/CSV direct mapping
+├── frontend-next/              # Next.js 14 Frontend
+│   ├── src/app/
+│   │   ├── (client)/           # Client-facing routes
+│   │   │   ├── client/dashboard/   # Dashboard with live processing
+│   │   │   ├── client/upload/      # Drag-and-drop multi-file upload
+│   │   │   ├── client/invoices/    # Invoice list with status tracking
+│   │   │   └── client/invoices/[id]/  # Split-screen audit view
+│   │   └── (admin)/            # Admin-only routes
+│   │       ├── admin/dashboard/    # Org analytics and metrics  
+│   │       ├── admin/invoices/     # Review queue management
+│   │       ├── admin/clients/      # User management
+│   │       └── admin/settings/     # Policy engine configuration
+│   ├── src/contexts/AuthContext.tsx  # Google OAuth + JWT management
+│   └── src/lib/api-client.ts        # All backend API calls
+├── Dockerfile                  # Docker build for Render/cloud deployment
+├── render.yaml                 # Render.com IaC config
+├── start-tunnel.sh             # One-click: start backend + Cloudflare Tunnel
+├── README.md                   # This file
+├── ERRORS_AND_STRATEGIES.md    # All bugs encountered + solutions
+├── TECHNICAL_SPECIFICATIONS.md # Deep tech spec for every component
+└── BRIEF_DOCUMENTATION.md     # Quick quickstart guide
+```
+
+---
+
+## 🤝 Authors
+
+Built with obsessive engineering precision.  
+For questions, contact: [ashishmullasserymenon75@gmail.com](mailto:ashishmullasserymenon75@gmail.com)
