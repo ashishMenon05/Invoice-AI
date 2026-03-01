@@ -94,9 +94,15 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 # CORS Rules
+# Combine env-configured origins with always-allowed Vercel preview/production domains
+_cors_origins = list(settings.ALLOWED_ORIGINS) + [
+    "https://invoice-ai-ashy.vercel.app",
+    "https://invoice-ai.vercel.app",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow all vercel preview deploys
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
