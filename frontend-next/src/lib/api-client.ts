@@ -150,7 +150,10 @@ export const apiClient = {
             method: "DELETE",
             headers: getHeaders()
         });
-        if (!res.ok) throw new Error("Delete failed");
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || "Delete failed");
+        }
     },
 
     reprocessInvoice: async (id: string) => {
@@ -158,7 +161,10 @@ export const apiClient = {
             method: "POST",
             headers: getHeaders()
         });
-        if (!res.ok) throw new Error("Reprocess failed");
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || "Reprocess failed");
+        }
         return res.json();
     },
 
