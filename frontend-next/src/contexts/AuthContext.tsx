@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { User, UserRole } from "@/types";
 
-const API_URL = "http://localhost:8000/api/v1";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api/v1";
 
 interface AuthContextType {
   user: User | null;
