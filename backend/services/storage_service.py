@@ -17,9 +17,9 @@ def get_s3_client():
         raise HTTPException(status_code=500, detail="Storage credentials not configured.")
     return boto3.client(
         "s3",
-        endpoint_url=settings.R2_ENDPOINT_URL,
-        aws_access_key_id=settings.R2_ACCESS_KEY,
-        aws_secret_access_key=settings.R2_SECRET_KEY,
+        endpoint_url=settings.R2_ENDPOINT_URL.strip(),
+        aws_access_key_id=settings.R2_ACCESS_KEY.strip(),
+        aws_secret_access_key=settings.R2_SECRET_KEY.strip(),
         region_name="auto"
     )
 
