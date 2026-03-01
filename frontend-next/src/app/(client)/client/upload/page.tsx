@@ -42,14 +42,18 @@ const ClientUpload = () => {
     try {
       const total = files.length;
       let completed = 0;
+      const BATCH_SIZE = 3; // Free tier: max 3 concurrent uploads to avoid OCR timeouts
 
-      await Promise.all(
-        files.map(async (file) => {
-          await apiClient.uploadInvoice(file);
-          completed += 1;
-          setProgress(Math.round((completed / total) * 100));
-        })
-      );
+      for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        const batch = files.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async (file) => {
+            await apiClient.uploadInvoice(file);
+            completed += 1;
+            setProgress(Math.round((completed / total) * 100));
+          })
+        );
+      }
 
       // Route back to dashboard to view all newly processing invoices
       window.location.href = `/client/dashboard`;
