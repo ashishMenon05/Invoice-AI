@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     R2_ACCESS_KEY: str = ""
     R2_SECRET_KEY: str = ""
     R2_ENDPOINT_URL: str = ""
+    R2_BUCKET_NAME: str = "invoiceai-storage"
 
     # Email Integration
     EMAIL_ADDRESS: str = ""
@@ -30,9 +31,9 @@ class Settings(BaseSettings):
     EMAIL_IMAP_PORT: int = 993
     GOOGLE_CLIENT_ID: str = ""
 
-    # OCR / Tesseract (Docker path: /usr/bin/tesseract, local override via env)
-    TESSDATA_PREFIX: str = "/usr/share/tesseract-ocr/4.00/tessdata"
-    TESSERACT_CMD: str = "/usr/bin/tesseract"
+    # OCR / Tesseract — local paths by default, override via env var for Docker/Render
+    TESSDATA_PREFIX: str = "/home/ashish/python/share/tessdata"
+    TESSERACT_CMD: str = "/home/ashish/python/bin/tesseract"
 
     # CORS
     ALLOWED_ORIGINS: list[str] = [

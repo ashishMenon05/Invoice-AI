@@ -36,7 +36,7 @@ async def upload_invoice_to_r2(file: UploadFile, org_id: str) -> str:
     if _is_r2_configured():
         # Production: Upload to Cloudflare R2
         s3 = get_s3_client()
-        bucket_name = os.getenv("R2_BUCKET_NAME", "invoice-ai-bucket")
+        bucket_name = settings.R2_BUCKET_NAME
         try:
             s3.put_object(
                 Bucket=bucket_name,
@@ -67,7 +67,7 @@ def save_bytes_to_storage(file_bytes: bytes, filename: str, org_id: str) -> str:
 
     if _is_r2_configured():
         s3 = get_s3_client()
-        bucket_name = os.getenv("R2_BUCKET_NAME", "invoice-ai-bucket")
+        bucket_name = settings.R2_BUCKET_NAME
         try:
             # Heuristically determine content-type
             ext = filename.lower().split('.')[-1]
@@ -100,7 +100,7 @@ def get_file_from_storage(s3_key: str) -> tuple[bytes, str]:
     """
     if _is_r2_configured():
         s3 = get_s3_client()
-        bucket_name = os.getenv("R2_BUCKET_NAME", "invoice-ai-bucket")
+        bucket_name = settings.R2_BUCKET_NAME
         try:
             response = s3.get_object(Bucket=bucket_name, Key=s3_key)
             file_bytes = response['Body'].read()
@@ -132,7 +132,7 @@ def delete_from_storage(s3_key: str) -> None:
     """Deletes a file from R2 or the local dev fallback."""
     if _is_r2_configured():
         s3 = get_s3_client()
-        bucket_name = os.getenv("R2_BUCKET_NAME", "invoice-ai-bucket")
+        bucket_name = settings.R2_BUCKET_NAME
         s3.delete_object(Bucket=bucket_name, Key=s3_key)
     else:
         local_path = LOCAL_STORAGE_DIR / s3_key
