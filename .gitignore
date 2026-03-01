@@ -67,3 +67,8 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Local uploads (dev only, files go to Cloudflare R2 in production)
+backend/local_uploads/
+*.sqlite3
+*.db
