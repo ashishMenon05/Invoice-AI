@@ -30,35 +30,56 @@ The result: an AI "accountant" that reads invoices the way a human does — unde
 
 ---
 
-## 🖼️ Screenshots
+## 🖼️ Application Screenshots
 
-## 👤 Client View
+### � Login / Sign Up
 
-The client-facing interface is designed for simplicity — upload invoices and track their status in real time.
+<div align="center">
+  <img src="./assets/screenshots/login_page.png" alt="Login Page" width="70%"/>
+  <br/><sub>Dual-mode authentication — Google OAuth one-click SSO or traditional Email/Password. Demo credentials shown on page.</sub>
+</div>
+
+---
+
+## �👤 Client View
+
+> The client interface is designed for simplicity — upload invoices, track AI processing live, and review extracted financial data.
 
 <table>
   <tr>
     <td align="center" width="50%">
       <img src="./assets/screenshots/client_dashboard.png" alt="Client Dashboard"/>
       <br/><b>Dashboard</b>
-      <br/><sub>Real-time processing pipeline with live invoice status updates</sub>
+      <br/><sub>Live pipeline stats (Queued / Processing / Done), 7-day volume chart, and recent invoice feed with status badges</sub>
     </td>
     <td align="center" width="50%">
       <img src="./assets/screenshots/client_upload.png" alt="Upload Interface"/>
-      <br/><b>Upload Interface</b>
-      <br/><sub>Drag-and-drop multi-file upload — PDF, images, spreadsheets</sub>
+      <br/><b>Upload Invoice</b>
+      <br/><sub>Drag-and-drop multi-file upload — supports PDF, JPG, PNG, XLSX, CSV. Batched processing to prevent server overload</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <img src="./assets/screenshots/client_invoices.png" alt="My Invoices"/>
-      <br/><b>My Invoices</b>
-      <br/><sub>Full invoice list with AI-extracted vendor, amount, date and status</sub>
+      <br/><b>My Invoices — Status Tracking</b>
+      <br/><sub>Full invoice list with AI-extracted vendor, amount, date, confidence score, and real-time status (Auto Approved / Under Review / Rejected)</sub>
     </td>
     <td align="center" width="50%">
-      <img src="./assets/screenshots/client_email_card.png" alt="Email Ingestion Card"/>
+      <img src="./assets/screenshots/client_invoice_detail.png" alt="Invoice Detail — AI Processed"/>
+      <br/><b>Invoice Detail — AI Extraction Result</b>
+      <br/><sub>Split-screen view: original file on left, structured AI-extracted JSON (line items, totals, taxes) on right. Human can review and confirm</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/client_email.png" alt="Gmail Invoice Sending"/>
       <br/><b>Email Ingestion</b>
-      <br/><sub>Pro tip card — forward invoices to the inbox for automatic processing</sub>
+      <br/><sub>Forward invoices directly from Gmail to the organization's dedicated ingestion address — AI picks it up automatically within 60 seconds</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/client_dashboard.png" alt="Submit via Email Card"/>
+      <br/><b>Email Ingestion Card</b>
+      <br/><sub>Dashboard shows the dedicated ingestion email address with a one-click Copy button</sub>
     </td>
   </tr>
 </table>
@@ -67,47 +88,48 @@ The client-facing interface is designed for simplicity — upload invoices and t
 
 ## 🛡️ Admin View
 
-The admin interface gives organization managers full visibility, control, and audit capability over every invoice flowing through the system.
+> Admins get full organizational visibility — analytics, invoice review queue, client management, policy engine, and audit controls.
 
 <table>
   <tr>
     <td align="center" width="50%">
       <img src="./assets/screenshots/admin_dashboard.png" alt="Admin Dashboard"/>
-      <br/><b>Analytics Dashboard</b>
-      <br/><sub>Org-wide metrics — volume trends, processing rates, confidence distributions</sub>
+      <br/><b>Admin Dashboard</b>
+      <br/><sub>Org-wide KPIs: Total Invoices (135), Auto-Approval Rate (59.3%), Fraud Flags (9), Duplicates Found (4), Avg Processing Time (7.45s)</sub>
     </td>
     <td align="center" width="50%">
-      <img src="./assets/screenshots/admin_invoices.png" alt="Admin Invoice Queue"/>
-      <br/><b>Invoice Review Queue</b>
-      <br/><sub>All client invoices with status, confidence score, and quick-action buttons</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="./assets/screenshots/admin_invoice_queue.png" alt="Admin Invoice List"/>
-      <br/><b>Full Invoice List</b>
-      <br/><sub>Complete audit log — every invoice, every status, every client in the org</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="./assets/screenshots/admin_policies.png" alt="Policy Engine"/>
-      <br/><b>Policy Engine</b>
-      <br/><sub>Configure auto-approve thresholds, duplicate detection, fraud flags per org</sub>
+      <img src="./assets/screenshots/admin_analytics.png" alt="Admin Analytics"/>
+      <br/><b>Analytics — 7-Day Volume & Approval Distribution</b>
+      <br/><sub>Line chart for processing volume vs fraud trends. Donut chart showing Auto Approved / Approved / Under Review / Rejected split</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="./assets/screenshots/admin_reprocess.png" alt="Batch Reprocessing"/>
-      <br/><b>Batch Reprocessing</b>
-      <br/><sub>One-click re-run AI pipeline on all failed invoices asynchronously</sub>
+      <img src="./assets/screenshots/admin_invoices.png" alt="All Invoices"/>
+      <br/><b>All Invoices — Full Audit Log</b>
+      <br/><sub>Complete list of every invoice across all clients — with vendor, amount, status, confidence score, and approve/reject action buttons</sub>
     </td>
     <td align="center" width="50%">
-      <img src="./assets/screenshots/admin_reprocess_result.png" alt="Reprocess Result"/>
-      <br/><b>Reprocessing Result</b>
-      <br/><sub>Invoices queued into Processing state — AI pipeline runs in background</sub>
+      <img src="./assets/screenshots/admin_review.png" alt="Admin Approve/Reject"/>
+      <br/><b>Invoice Review — Accept / Reject</b>
+      <br/><sub>Side-by-side comparison: original invoice file vs AI extraction. Admin can approve instantly or reject with a reason</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/admin_users.png" alt="Client Management"/>
+      <br/><b>Client / User Management</b>
+      <br/><sub>View all registered users in the organization — email, role, join date, and invoice submission count</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="./assets/screenshots/admin_settings.png" alt="Admin Settings / Policy Engine"/>
+      <br/><b>Policy Engine & Settings</b>
+      <br/><sub>Configure per-org rules: auto-approve confidence threshold, duplicate detection, fraud flag sensitivity, and allowed vendors</sub>
     </td>
   </tr>
 </table>
 
+---
 
 ---
 
