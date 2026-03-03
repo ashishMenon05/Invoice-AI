@@ -78,7 +78,8 @@ function InvoicesContent() {
 
 
     fetchInvoices();
-    const interval = setInterval(fetchInvoices, 5000);
+    // Poll every 30s — 5s was too aggressive for users on Cloudflare Tunnel
+    const interval = setInterval(fetchInvoices, 30000);
     return () => clearInterval(interval);
   }, [page]);
 

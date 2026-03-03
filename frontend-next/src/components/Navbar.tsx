@@ -43,18 +43,27 @@ export const Navbar = ({ title }: { title: string }) => {
   const bellRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const fetchNotifs = useCallback(async () => {
+    // Cancel any in-flight request before starting a new one
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
     try {
       const data: Notif[] = await apiClient.getNotifications();
       setNotifs(data);
       setUnread(data.length);
-    } catch { }
+    } catch (e: unknown) {
+      // Ignore intentional aborts; don't spam console for network blips
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+    }
   }, []);
 
   useEffect(() => {
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 15000); // poll every 15s
-    return () => clearInterval(interval);
+    // Poll every 60s — distant users through Cloudflare Tunnel need breathing room
+    const interval = setInterval(fetchNotifs, 60000);
+    return () => { clearInterval(interval); abortRef.current?.abort(); };
   }, [fetchNotifs]);
 
   // Close dropdowns on outside click

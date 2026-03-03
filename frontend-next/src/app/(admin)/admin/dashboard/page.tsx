@@ -54,8 +54,8 @@ const AdminDashboard = () => {
     };
 
     load();
-    // Refresh KPIs every 30s
-    const interval = setInterval(load, 30000);
+    // Refresh KPIs every 60s — 30s was too aggressive through Cloudflare Tunnel
+    const interval = setInterval(load, 60000);
     return () => clearInterval(interval);
   }, []);
 
