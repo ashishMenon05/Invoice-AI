@@ -1,11 +1,12 @@
 "use client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Search, Bell, LogOut, Settings, CheckCircle, AlertTriangle, Clock, UploadCloud, X } from "lucide-react";
+import { Search, Bell, LogOut, Settings, CheckCircle, AlertTriangle, Clock, UploadCloud, X, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 type Notif = {
   id: string;
@@ -35,6 +36,7 @@ const STATUS_MSG: Record<string, string> = {
 
 export const Navbar = ({ title }: { title: string }) => {
   const { user, logout } = useAuth();
+  const { toggle } = useSidebar();
   const [open, setOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notif[]>([]);
@@ -90,8 +92,16 @@ export const Navbar = ({ title }: { title: string }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm px-6">
-      <h1 className="text-lg font-semibold">{title}</h1>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm px-4 gap-3">
+      {/* Hamburger — mobile only */}
+      <button
+        className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+        onClick={toggle}
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+      <h1 className="text-base md:text-lg font-semibold truncate flex-1">{title}</h1>
       <div className="flex items-center gap-3">
         <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
