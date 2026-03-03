@@ -6,7 +6,7 @@ import time
 
 from dependencies import SessionLocal
 from models.all import Invoice, InvoiceEvent, InvoiceStatus
-from services.storage_service import upload_invoice_to_r2
+from services.storage_service import generate_r2_key, upload_raw_to_r2
 from services.ocr_service import extract_text_from_file
 from services.llm_service import extract_invoice_data_with_llm
 from services.validation_service import validate_and_score
@@ -40,16 +40,16 @@ async def create_invoice_with_background_processing(
         raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
         
     try:
-        # Step 1: Upload to Storage immediately (Sync UX Requirement)
-        r2_key = await upload_invoice_to_r2(file, org_id=org_id)
-        
-        # Rewind file to pass raw bytes to the background task synchronously
-        await file.seek(0)
+        # Step 1: Read file bytes FAST (already in RAM — no network call)
         file_bytes = await file.read()
+        content_type = file.content_type or "application/octet-stream"
+
+        # Step 2: Pre-generate the R2 key (instant string ops — no network)
+        r2_key = generate_r2_key(org_id, safe_filename)
         
-        # Step 2: Initialize DB Processing Ticket
+        # Step 3: Initialize DB Processing Ticket immediately
         new_invoice = Invoice(
-            file_url=r2_key,
+            file_url=r2_key,          # Key is known now; upload happens in background
             status=InvoiceStatus.PROCESSING,
             organization_id=org_id,
             uploaded_by=user_id
@@ -59,11 +59,10 @@ async def create_invoice_with_background_processing(
         db.refresh(new_invoice)
         
         # Initial Logging
-        log_invoice_event(db, new_invoice.id, user_id, "UPLOADED", f"Invoice file {safe_filename} uploaded.")
-        log_invoice_event(db, new_invoice.id, user_id, "PROCESSING_QUEUED", "OCR text extraction queued in background.")
+        log_invoice_event(db, new_invoice.id, user_id, "UPLOADED", f"Invoice file {safe_filename} received.")
+        log_invoice_event(db, new_invoice.id, user_id, "PROCESSING_QUEUED", "R2 upload + OCR extraction queued in background.")
         
-        # Step 3: Trigger fastapi Background Task
-        # Pass the UUID instead of the DB object so the background worker can spawn its own safe session.
+        # Step 4: Trigger background task (R2 upload + OCR + LLM all happen AFTER response)
         if safe_filename.lower().endswith((".csv", ".xlsx", ".xls")):
             from services.spreadsheet_service import process_spreadsheet_background
             background_tasks.add_task(
@@ -71,7 +70,9 @@ async def create_invoice_with_background_processing(
                 new_invoice.id,
                 file_bytes,
                 safe_filename,
-                user_id
+                user_id,
+                r2_key,
+                content_type,
             )
         else:
             background_tasks.add_task(
@@ -79,7 +80,9 @@ async def create_invoice_with_background_processing(
                 new_invoice.id, 
                 file_bytes, 
                 safe_filename, 
-                user_id
+                user_id,
+                r2_key,
+                content_type,
             )
             
         return new_invoice
@@ -88,9 +91,11 @@ async def create_invoice_with_background_processing(
         logger.error(f"Upload flow failed: {fatal_e}")
         raise HTTPException(status_code=500, detail="Failed to initiate document upload.")
 
-def _process_invoice_background(invoice_id: str, file_bytes: bytes, filename: str, user_id: str):
+def _process_invoice_background(invoice_id: str, file_bytes: bytes, filename: str, user_id: str,
+                                 r2_key: str = "", content_type: str = "application/octet-stream"):
     """
     Background worker strictly opening its own session so it doesn't block FastAPIs main dependencies.
+    Performs R2 upload FIRST (non-blocking, after HTTP response already sent), then OCR + LLM.
     """
     db = SessionLocal()
     try:
@@ -99,6 +104,15 @@ def _process_invoice_background(invoice_id: str, file_bytes: bytes, filename: st
         if not invoice:
             logger.error(f"Background Process Misfire: Invoice {invoice_id} missing from DB.")
             return
+
+        # Step 0: Upload to R2 NOW (HTTP response already returned — no timeout risk)
+        if r2_key:
+            try:
+                upload_raw_to_r2(file_bytes, r2_key, content_type)
+                logger.info(f"R2 upload complete for {invoice_id}: {r2_key}")
+            except Exception as r2_err:
+                logger.error(f"R2 upload failed for {invoice_id}: {r2_err}")
+                # Continue processing — OCR can still run even if R2 upload fails
 
         log_invoice_event(db, invoice.id, user_id, "PROCESSING_STARTED", "Starting async OCR extraction.")
         

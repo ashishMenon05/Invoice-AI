@@ -10,7 +10,8 @@ import uuid
 
 logger = logging.getLogger(__name__)
 
-def process_spreadsheet_background(invoice_id: str, file_bytes: bytes, filename: str, user_id: str):
+def process_spreadsheet_background(invoice_id: str, file_bytes: bytes, filename: str, user_id: str,
+                                    r2_key: str = "", content_type: str = "application/octet-stream"):
     db = SessionLocal()
     _start_time = time.monotonic()
     try:
@@ -19,6 +20,14 @@ def process_spreadsheet_background(invoice_id: str, file_bytes: bytes, filename:
         if not tracker_invoice:
             logger.error(f"Spreadsheet Background Process Misfire: Invoice {invoice_id} missing from DB.")
             return
+
+        # R2 upload happens here (after HTTP response already returned)
+        if r2_key:
+            try:
+                from services.storage_service import upload_raw_to_r2
+                upload_raw_to_r2(file_bytes, r2_key, content_type)
+            except Exception as r2_err:
+                logger.error(f"R2 upload failed for spreadsheet {invoice_id}: {r2_err}")
 
         log_invoice_event(db, tracker_invoice.id, user_id, "PROCESSING_STARTED", f"Importing structured rows from {filename}.")
 

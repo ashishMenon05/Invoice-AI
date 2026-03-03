@@ -56,6 +56,34 @@ async def upload_invoice_to_r2(file: UploadFile, org_id: str) -> str:
     await file.seek(0)
     return s3_key
 
+def generate_r2_key(org_id: str, filename: str) -> str:
+    """Pre-generate an R2 key without performing any upload. Use for fast response paths."""
+    unique_filename = f"{uuid.uuid4()}_{filename}"
+    return f"organizations/{org_id}/invoices/{unique_filename}"
+
+def upload_raw_to_r2(file_bytes: bytes, s3_key: str, content_type: str = "application/octet-stream") -> None:
+    """
+    Sync upload of raw bytes to a pre-generated R2 key.
+    Designed for use inside background tasks so the HTTP response is not held open.
+    Falls back to local storage if R2 is not configured.
+    """
+    if _is_r2_configured():
+        s3 = get_s3_client()
+        try:
+            s3.put_object(
+                Bucket=settings.R2_BUCKET_NAME,
+                Key=s3_key,
+                Body=file_bytes,
+                ContentType=content_type,
+            )
+        except Exception as e:
+            raise RuntimeError(f"R2 upload failed for key {s3_key}: {e}")
+    else:
+        local_path = LOCAL_STORAGE_DIR / s3_key
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        local_path.write_bytes(file_bytes)
+
+
 def save_bytes_to_storage(file_bytes: bytes, filename: str, org_id: str) -> str:
     """
     Saves raw bytes to storage (R2 or local).
