@@ -23,6 +23,48 @@ def get_s3_client():
         region_name="auto"
     )
 
+def configure_r2_cors():
+    """Called once on startup — sets CORS rules so browsers can PUT directly to R2."""
+    if not _is_r2_configured():
+        return
+    try:
+        s3 = get_s3_client()
+        s3.put_bucket_cors(
+            Bucket=settings.R2_BUCKET_NAME,
+            CORSConfiguration={
+                "CORSRules": [{
+                    "AllowedHeaders": ["*"],
+                    "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+                    "AllowedOrigins": [
+                        "https://invoice-ai-ashy.vercel.app",
+                        "https://*.vercel.app",
+                        "http://localhost:3000",
+                    ],
+                    "MaxAgeSeconds": 3600,
+                }]
+            }
+        )
+        print("✅ R2 CORS configured for direct browser upload")
+    except Exception as e:
+        print(f"⚠️  R2 CORS config skipped: {e}")
+
+def generate_presigned_put_url(r2_key: str, content_type: str, expires_in: int = 300) -> str:
+    """
+    Returns a presigned PUT URL valid for 5 minutes.
+    The browser PUTs the file directly to R2 — no bytes travel through Cloudflare Tunnel.
+    """
+    s3 = get_s3_client()
+    return s3.generate_presigned_url(
+        "put_object",
+        Params={
+            "Bucket": settings.R2_BUCKET_NAME,
+            "Key": r2_key,
+            "ContentType": content_type,
+        },
+        ExpiresIn=expires_in,
+    )
+
+
 async def upload_invoice_to_r2(file: UploadFile, org_id: str) -> str:
     """
     Uploads invoice to R2 if configured, otherwise saves to local filesystem.

@@ -18,16 +18,49 @@ const getHeaders = (isFormData = false) => {
 
 export const apiClient = {
     uploadInvoice: async (file: File) => {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await fetch(`${API_URL}/invoices/upload`, {
+        // Step 1: Ask backend for a presigned R2 URL (tiny request, fast through tunnel)
+        const presignRes = await fetch(`${API_URL}/invoices/presigned-upload`, {
             method: "POST",
-            headers: getHeaders(true),
-            body: formData
+            headers: getHeaders(),
+            body: JSON.stringify({
+                filename: file.name,
+                content_type: file.type || "application/octet-stream",
+                file_size: file.size,
+            }),
         });
-        if (!res.ok) throw new Error("Upload failed");
-        return res.json();
+        if (!presignRes.ok) throw new Error("Failed to initiate upload");
+        const { presigned_url, invoice_id, use_fallback } = await presignRes.json();
+
+        if (use_fallback || !presigned_url) {
+            // Local dev fallback: R2 not configured, use legacy multipart
+            const formData = new FormData();
+            formData.append("file", file);
+            const res = await fetch(`${API_URL}/invoices/upload`, {
+                method: "POST",
+                headers: getHeaders(true),
+                body: formData,
+            });
+            if (!res.ok) throw new Error("Upload failed");
+            return res.json();
+        }
+
+        // Step 2: PUT file DIRECTLY to R2 — file bytes never touch Cloudflare Tunnel!
+        const putRes = await fetch(presigned_url, {
+            method: "PUT",
+            headers: { "Content-Type": file.type || "application/octet-stream" },
+            body: file,
+        });
+        if (!putRes.ok) throw new Error("Direct R2 upload failed");
+
+        // Step 3: Tell backend to kick off OCR pipeline (tiny request, fast)
+        const processRes = await fetch(`${API_URL}/invoices/${invoice_id}/trigger-processing`, {
+            method: "POST",
+            headers: getHeaders(),
+        });
+        if (!processRes.ok) throw new Error("Failed to trigger processing");
+
+        // Return a compatible response shape matching /upload endpoint
+        return { id: invoice_id, status: "processing" };
     },
 
     listInvoices: async (role: "admin" | "client", limit?: number) => {

@@ -1,13 +1,16 @@
 from fastapi import APIRouter, Depends, UploadFile, File, BackgroundTasks, HTTPException, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
 
 from dependencies import get_db, require_client
 from models.all import User
 from schemas.invoice_schema import InvoiceResponse, InvoiceListResponse
-from services.storage_service import get_file_from_storage
+from services.storage_service import get_file_from_storage, generate_r2_key, generate_presigned_put_url, _is_r2_configured
 from services.invoice_service import (
-    create_invoice_with_background_processing, get_client_invoices, get_client_invoice
+    create_invoice_with_background_processing, get_client_invoices, get_client_invoice,
+    log_invoice_event
 )
 from core.limiter import limiter
 
@@ -45,7 +48,109 @@ def get_notifications(
     ]
 
 
-# --- Client Routes ---
+class PresignedUploadRequest(BaseModel):
+    filename: str
+    content_type: str
+    file_size: int = 0
+
+
+# --- Presigned Upload (browser → R2 directly, bypasses tunnel) ---
+@router.post("/presigned-upload")
+@limiter.limit("20/minute")
+def request_presigned_upload(
+    request: Request,
+    body: PresignedUploadRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_client)
+):
+    """
+    Step 1 of direct R2 upload flow.
+    Returns a presigned PUT URL + pre-created invoice_id.
+    The client then PUTs the file bytes DIRECTLY to R2 (no tunnel involved),
+    then calls /invoices/{id}/trigger-processing to start OCR.
+    """
+    import re
+    from models.all import Invoice, InvoiceStatus
+    safe_filename = re.sub(r'[^a-zA-Z0-9_.-]', '', body.filename) or "unnamed_invoice.pdf"
+
+    valid_extensions = (".pdf", ".png", ".jpg", ".jpeg", ".csv", ".xlsx", ".xls")
+    if not safe_filename.lower().endswith(valid_extensions):
+        raise HTTPException(status_code=400, detail="Invalid file format.")
+
+    if body.file_size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Maximum 10MB.")
+
+    r2_key = generate_r2_key(current_user.organization_id, safe_filename)
+
+    # Pre-create DB record so the invoice_id exists before upload
+    new_invoice = Invoice(
+        file_url=r2_key,
+        status=InvoiceStatus.PROCESSING,
+        organization_id=current_user.organization_id,
+        uploaded_by=current_user.id
+    )
+    db.add(new_invoice)
+    db.commit()
+    db.refresh(new_invoice)
+    log_invoice_event(db, new_invoice.id, current_user.id, "UPLOADED", f"Invoice {safe_filename} presigned upload initiated.")
+
+    if not _is_r2_configured():
+        # Local dev fallback — use the regular tunnel upload
+        return {
+            "presigned_url": None,
+            "invoice_id": new_invoice.id,
+            "r2_key": r2_key,
+            "use_fallback": True  # frontend should fall back to multipart upload
+        }
+
+    presigned_url = generate_presigned_put_url(r2_key, body.content_type)
+    return {
+        "presigned_url": presigned_url,
+        "invoice_id": new_invoice.id,
+        "r2_key": r2_key,
+        "use_fallback": False
+    }
+
+
+@router.post("/{invoice_id}/trigger-processing")
+@limiter.limit("20/minute")
+def trigger_invoice_processing(
+    request: Request,
+    invoice_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_client)
+):
+    """
+    Step 2 of direct R2 upload flow.
+    Called after the browser has ALREADY PUT the file to R2 via presigned URL.
+    Downloads the file from R2 and kicks off the OCR + LLM background pipeline.
+    """
+    from services.invoice_service import _process_invoice_background
+    from services.storage_service import get_file_from_storage
+
+    invoice = get_client_invoice(db, invoice_id, current_user.organization_id)
+    if not invoice.file_url:
+        raise HTTPException(status_code=400, detail="No file URL associated with invoice.")
+
+    try:
+        file_bytes, content_type = get_file_from_storage(invoice.file_url)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not fetch file from storage: {e}")
+
+    filename = invoice.file_url.split("/")[-1]
+    log_invoice_event(db, invoice.id, current_user.id, "PROCESSING_QUEUED", "Triggering OCR pipeline after direct R2 upload.")
+
+    if filename.lower().endswith((".csv", ".xlsx", ".xls")):
+        from services.spreadsheet_service import process_spreadsheet_background
+        background_tasks.add_task(process_spreadsheet_background, invoice.id, file_bytes, filename, current_user.id)
+    else:
+        background_tasks.add_task(_process_invoice_background, invoice.id, file_bytes, filename, current_user.id)
+
+    return {"invoice_id": invoice.id, "status": "processing_queued"}
+
+
+# --- Client Routes (legacy multipart — kept as fallback for local dev) ---
 @router.post("/upload", response_model=InvoiceResponse)
 @limiter.limit("20/minute")
 async def upload_invoice(
@@ -56,8 +161,8 @@ async def upload_invoice(
     current_user: User = Depends(require_client)
 ):
     """
-    Accepts an invoice PDF/Image from a client user, stores it in R2 under their Organization, 
-    initializes a PROCESSING record, and spins off AI extraction in the background.
+    Legacy multipart upload — used as fallback when R2 is not configured (local dev).
+    For production, use POST /invoices/presigned-upload + PUT to presigned URL.
     """
     return await create_invoice_with_background_processing(
         db, 
@@ -66,6 +171,7 @@ async def upload_invoice(
         current_user.id,
         background_tasks
     )
+
 
 @router.get("/my", response_model=List[InvoiceListResponse])
 def list_my_invoices(
