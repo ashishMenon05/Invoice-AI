@@ -64,6 +64,11 @@ async def lifespan(app: FastAPI):
     logger.info(f"Tesseract Initialized: {settings.TESSERACT_CMD} (Prefix: {settings.TESSDATA_PREFIX})")
     
     _seed_admin()
+
+    # Configure R2 CORS so browsers can PUT files directly to R2 (bypassing tunnel)
+    from services.storage_service import configure_r2_cors
+    configure_r2_cors()
+
     scheduler = BackgroundScheduler()
     scheduler.add_job(fetch_and_process_emails, 'interval', seconds=60, id='email_poll_job')
     scheduler.start()
