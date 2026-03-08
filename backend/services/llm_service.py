@@ -14,9 +14,10 @@ Do NOT include any markdown formatting like ```json or ```. Return pure JSON onl
 
 CRITICAL INSTRUCTIONS FOR ACCURACY & MATH:
 1. TABULAR OCR WARNING: OCR engines often scramble tables. Do not blindly assume numbers belong to adjacent text. Ensure description, qty, price, and total make logical sense.
-2. 🚨 ZERO QUANTITY HALLUCINATION POLICY 🚨: The "qty" field is almost always a small float (1, 2, 0.5, 10). If you see a large random integer (e.g. 59381, 1084), IT IS A PRODUCT SKU OR RECEIPT CODE, NOT THE QUANTITY. Default qty to 1 if you are unsure.
-3. STRICT LINE MATH: For every line item, it MUST mathematically equal: (qty * unit_price) == line_total. If it doesn't match, you extracted the wrong numbers. Fix them.
-4. GRAND TOTAL EXTRACTION: Ensure the "grand_total" is the final, bottom-line amount due. If the explicit grand total string is illegible or missing from OCR, you MUST mathematically CALCULATE IT by summing the "line_total" of all extracted line items + tax. DO NOT hallucinate a random number.
+2. 🌍 EUROPEAN DECIMAL FORMATTING: Many invoices use commas (",") instead of periods (".") for decimals (e.g., "5,00" means 5.0, NOT 500). ALWAYS convert comma-decimals to standard periods for JSON float fields. If a quantity appears as "5,00", return `5.0`.
+3. 🚨 ZERO QUANTITY HALLUCINATION POLICY 🚨: The "qty" field is almost always a small number (1, 2, 0.5, 10). If you extract a massive integer (like 50000 or 1084), it is likely an Item ID, OR it was a decimal value where the OCR missed the comma (e.g. 500 might actually be 5.00). Use the line math (`total / price = qty`) to deduce the true quantity before falling back to 1.
+4. STRICT LINE MATH: For every line item, it MUST mathematically equal: (qty * unit_price) == line_total. If it doesn't match, you extracted the wrong numbers. Fix them.
+5. GRAND TOTAL EXTRACTION: Ensure the "grand_total" is the final, bottom-line amount due. If the explicit grand total string is illegible or missing from OCR, you MUST mathematically CALCULATE IT by summing the "line_total" of all extracted line items + tax. DO NOT hallucinate a random number.
 
 Required fields in the JSON response:
 - "vendor_name" (string or null)
